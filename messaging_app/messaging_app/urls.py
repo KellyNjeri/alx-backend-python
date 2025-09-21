@@ -18,6 +18,12 @@ from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
 from rest_framework.routers import DefaultRouter
+from chats.views import ConversationViewSet, MessageViewSet
+
+# Create router and register viewsets (explicitly showing DefaultRouter usage)
+router = DefaultRouter()
+router.register(r'conversations', ConversationViewSet, basename='conversation')
+router.register(r'messages', MessageViewSet, basename='message')
 
 def api_root(request):
     """Simple API root view"""
@@ -37,6 +43,6 @@ def api_root(request):
 urlpatterns = [
     path('', api_root, name='root'),
     path('admin/', admin.site.urls),
-    path('api/', include('chats.urls')),
+    path('api/', include(router.urls)),  # Include the router URLs
     path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]
