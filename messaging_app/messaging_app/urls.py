@@ -16,15 +16,12 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.http import HttpResponse
-from django.shortcuts import redirect
-
-def root_redirect(request):
-    """Redirect root URL to API endpoints"""
-    return redirect('api/')
+from django.views.generic import RedirectView
+from rest_framework.routers import DefaultRouter
 
 def api_root(request):
     """Simple API root view"""
+    from django.http import HttpResponse
     content = """
     <h1>Messaging App API</h1>
     <p>Welcome to the Messaging App API. Available endpoints:</p>
@@ -32,8 +29,8 @@ def api_root(request):
         <li><a href="/api/conversations/">Conversations</a></li>
         <li><a href="/api/messages/">Messages</a></li>
         <li><a href="/admin/">Admin Interface</a></li>
+        <li><a href="/api-auth/login/">API Authentication</a></li>
     </ul>
-    <p>Use API clients like Postman or curl to interact with the endpoints.</p>
     """
     return HttpResponse(content)
 
@@ -41,4 +38,5 @@ urlpatterns = [
     path('', api_root, name='root'),
     path('admin/', admin.site.urls),
     path('api/', include('chats.urls')),
+    path('api-auth/', include('rest_framework.urls', namespace='rest_framework')),
 ]

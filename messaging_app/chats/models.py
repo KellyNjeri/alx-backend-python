@@ -2,6 +2,7 @@ import uuid
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.core.validators import MinLengthValidator
+from django.contrib.auth.hashers import make_password
 
 class User(AbstractUser):
     ROLE_CHOICES = [
@@ -18,7 +19,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=10, choices=ROLE_CHOICES, default='guest', null=False)
     created_at = models.DateTimeField(auto_now_add=True)
     
-    # Override username field to use email instead
+    # Remove the username field and use email instead
     username = None
     USERNAME_FIELD = 'email'
     REQUIRED_FIELDS = ['first_name', 'last_name']
@@ -30,25 +31,9 @@ class User(AbstractUser):
     
     def __str__(self):
         return f"{self.first_name} {self.last_name} ({self.email})"
-
-class Conversation(models.Model):
-    conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
-    participants = models.ManyToManyField(User, related_name='conversations')
-    created_at = models.DateTimeField(auto_now_add=True)
     
-    def __str__(self):
-        participant_names = ", ".join([f"{user.first_name} {user.last_name}" for user in self.participants.all()[:3]])
-        return f"Conversation: {participant_names}"
-
-class Message(models.Model):
-    message_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False, db_index=True)
-    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_messages')
-    conversation = models.ForeignKey(Conversation, on_delete=models.CASCADE, related_name='messages')
-    message_body = models.TextField(null=False, validators=[MinLengthValidator(1)])
-    sent_at = models.DateTimeField(auto_now_add=True)
-    
-    class Meta:
-        ordering = ['sent_at']
-    
-    def __str__(self):
-        return f"Message from {self.sender.first_name}: {self.message_body[:50]}..."
+    def save(self, *args, **kwargs):
+        # Hash password if it's provided and not already hashed
+        if self.password and not self.password.startswith('pbkdf2_sha256$'):
+            self.password = make_password(self.password)
+        super().save(*args, **kwargs)
