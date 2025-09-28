@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django_filters.rest_framework import DjangoFilterBackend
+
 from .models import Conversation, Message
 from .serializers import (
     ConversationSerializer,
@@ -10,13 +11,17 @@ from .serializers import (
     ConversationCreateSerializer,
     MessageCreateSerializer,
 )
+from .permissions import IsParticipantOfConversation
+from .pagination import MessagePagination
+from .filters import MessageFilter
 
 
 class ConversationViewSet(viewsets.ModelViewSet):
     """
     Handles creating conversations, listing them, and managing messages inside.
     """
-    permission_classes = [IsAuthenticated]
+    serializer_class = ConversationSerializer
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     queryset = Conversation.objects.all()
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     ordering_fields = ['created_at']
@@ -55,7 +60,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         conversation = self.get_object()
 
         # Ensure the user is a participant
-        if not conversation.participants.filter(user_id=request.user.user_id).exists():
+        if not conversation.participants.filter(id=request.user.id).exists():
             return Response(
                 {"error": "You are not a participant in this conversation"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -79,7 +84,7 @@ class ConversationViewSet(viewsets.ModelViewSet):
         """
         conversation = self.get_object()
 
-        if not conversation.participants.filter(user_id=request.user.user_id).exists():
+        if not conversation.participants.filter(id=request.user.id).exists():
             return Response(
                 {"error": "You are not a participant in this conversation"},
                 status=status.HTTP_403_FORBIDDEN,
@@ -98,13 +103,14 @@ class ConversationViewSet(viewsets.ModelViewSet):
 
 class MessageViewSet(viewsets.ReadOnlyModelViewSet):
     """
-    Read-only endpoint for messages. Users can only see messages
-    in conversations they are a participant of.
+    Read-only endpoint for messages.
+    Users can only see messages in conversations they are part of.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticated, IsParticipantOfConversation]
     serializer_class = MessageSerializer
+    pagination_class = MessagePagination
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter, filters.SearchFilter]
-    filterset_fields = ['conversation']
+    filterset_class = MessageFilter
     ordering_fields = ['sent_at']
     ordering = ['-sent_at']
     search_fields = ['message_body']
