@@ -1,6 +1,6 @@
 from rest_framework.permissions import BasePermission
 from .models import Conversation, Message
-
+from rest_framework import permissions
 class IsParticipantOfConversation(BasePermission):
     """
     Only participants in a conversation can view, send, update, or delete messages.
